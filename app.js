@@ -81,6 +81,15 @@ function categories() {
   return Object.entries(map).map(([name, ids]) => ({ name, ids })).sort((a, b) => b.ids.length - a.ids.length);
 }
 
+function keyBadge(q, mine) {
+  if (mine) return '<span class="badge mine">Twój klucz</span>';
+  if (q.a == null) return '';
+  if (q.u) return '<span class="badge">do sprawdzenia w podręczniku</span>';
+  if (q.v) return '<span class="badge ok">klucz AI · zgodny z innym opracowaniem</span>';
+  return '<span class="badge">klucz AI – niezweryfikowany</span>';
+}
+const toVerify = () => Q.filter(q => q.u && S.q[q.id]?.ans == null);
+
 // ---------- sessions ----------
 function startSession(mode, ids, title, opts = {}) {
   session = { mode, ids, i: 0, answers: {}, title, started: Date.now(), limit: opts.limit || 0, requeued: {}, origin: opts.origin || '' };
@@ -157,6 +166,7 @@ routes[''] = () => {
     <button class="btn" data-go="sources"><span>Testy z poprzednich sesji</span><span class="count">${sources().length} ›</span></button>
     <button class="btn" id="wrong" ${wrong ? '' : 'disabled'}><span>Moje błędy<span class="sub">pytania, na które ostatnio odpowiedziałaś źle</span></span><span class="count">${wrong}</span></button>
     <button class="btn" id="starred" ${starred ? '' : 'disabled'}><span>Oznaczone gwiazdką</span><span class="count">${starred}</span></button>
+    <button class="btn" id="verify" ${toVerify().length ? '' : 'disabled'}><span>Do sprawdzenia w podręczniku<span class="sub">pytania, przy których klucz jest niepewny</span></span><span class="count">${toVerify().length}</span></button>
     <h2>Inne</h2>
     <button class="btn" data-go="search"><span>Szukaj pytania</span><span class="count">›</span></button>
     <button class="btn" data-go="history"><span>Historia egzaminów</span><span class="count">${S.history.length}</span></button>
@@ -166,6 +176,7 @@ routes[''] = () => {
   document.getElementById('learn').onclick = () => startSession('learn', learnIds(Q.map(q => q.id)), 'Nauka', { origin: '' });
   document.getElementById('wrong').onclick = () => startSession('practice', shuffle(Q.filter(q => S.q[q.id]?.lastOk === false).map(q => q.id)), 'Moje błędy');
   document.getElementById('starred').onclick = () => startSession('practice', shuffle(Q.filter(q => S.q[q.id]?.star).map(q => q.id)), 'Oznaczone');
+  document.getElementById('verify').onclick = () => startSession('practice', toVerify().map(q => q.id), 'Do sprawdzenia');
 };
 
 function bindGo() {
@@ -273,8 +284,9 @@ routes.quiz = () => {
       <div class="card explain ${ok === false ? 'wrong' : ''}">
         <div class="verdict ${ok ? 'ok' : ok === false ? 'bad' : ''}">${ok ? 'Dobrze!' : ok === false ? `Źle – poprawna: ${LETTERS[right]}` : 'Brak klucza do tego pytania'}</div>
         ${q.e ? `<div>${esc(q.e)}</div>` : ''}
-        <div class="small muted" style="margin-top:8px">${mine ? '<span class="badge mine">Twój klucz</span>' : (q.a != null ? '<span class="badge">klucz AI – niezweryfikowany</span>' : '')}
+        <div class="small muted" style="margin-top:8px">${keyBadge(q, mine)}
           ${q.occ.length > 1 ? ` · pojawiło się w ${q.occ.length} testach` : ''}</div>
+        ${q.u && !mine ? `<div class="small" style="margin-top:6px;color:var(--warn)">⚠ ${esc(q.u)}</div>` : ''}
         ${q.lit ? `<div class="lit">📖 ${esc(q.lit)}</div>` : ''}
         <div class="actions">
           <button class="link" id="fix">${mine ? 'Przywróć klucz AI' : 'Klucz jest błędny? Wskaż poprawną'}</button>
@@ -444,8 +456,10 @@ routes.settings = () => {
     <h2>O kluczu odpowiedzi</h2>
     <div class="card small">
       Pytania pochodzą z testów CMKP. Oficjalnego klucza nie ma w plikach PDF, więc poprawne odpowiedzi i wyjaśnienia
-      przygotował model AI (Claude) – mogą zawierać błędy. Jeśli się nie zgadzasz, w pytaniu wybierz
-      „Klucz jest błędny?” i wskaż swoją odpowiedź. Twoje poprawki: <b>${overrides}</b>.
+      przygotował model AI (Claude) – mogą zawierać błędy. ${Q.filter(q => q.v).length} odpowiedzi jest zgodnych
+      z niezależnym opracowaniem testów (specjalizacja24.pl), a ${Q.filter(q => q.u).length} oznaczono jako niepewne
+      („Do sprawdzenia w podręczniku”). Jeśli się nie zgadzasz, w pytaniu wybierz „Klucz jest błędny?”
+      i wskaż swoją odpowiedź – poprawione pytanie znika z listy do sprawdzenia. Twoje poprawki: <b>${overrides}</b>.
     </div>
     <h2>Strefa ryzyka</h2>
     <button class="btn" id="reset" style="color:var(--bad)"><span>Wyzeruj cały postęp</span></button>
