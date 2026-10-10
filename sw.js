@@ -1,5 +1,5 @@
 // Bump VERSION on every deploy (tools/build_app_data.py does it automatically).
-const VERSION = '20261010-1450';
+const VERSION = '20261010-1514';
 const CACHE = 'anestezja-' + VERSION;
 const FILES = ['./', 'index.html', 'app.css', 'app.js', 'questions.json', 'manifest.webmanifest',
   'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];

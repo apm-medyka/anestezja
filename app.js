@@ -104,7 +104,11 @@ function learnIds(pool) {
 
 // ---------- router ----------
 const routes = {};
-function go(hash) { location.hash = '#/' + hash; }
+function go(hash) {
+  // same hash fires no hashchange (e.g. "Powtórz błędne" from the summary, which also lives at #/quiz)
+  if (location.hash === '#/' + hash) route();
+  else location.hash = '#/' + hash;
+}
 function route() {
   clearInterval(timerHandle);
   const h = decodeURIComponent(location.hash.replace(/^#\/?/, ''));
